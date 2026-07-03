@@ -15,7 +15,7 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background-image:linear-gradient(rgba(246,243,236,0.5), rgba(246,243,236,0.5)), var(--bg-photo);
+    background-image:linear-gradient(rgba(246,243,236,0.85), rgba(246,243,236,0.85)), var(--bg-photo);
     background-size:cover; background-position:top center; background-repeat:no-repeat; background-attachment:fixed;
     background-color:var(--parchment); color:var(--ink); font-family:var(--font); direction:rtl; -webkit-font-smoothing:antialiased;
   }
@@ -89,6 +89,12 @@
   .check-row input{margin-top:3px;}
   .check-row label{font-size:13px; line-height:1.6;}
   .check-row.invalid{border-color:var(--red); background:#fdf2f2;}
+
+  .terms-box{margin-top:26px; border:1px solid #e4dfd3; border-radius:2px; overflow:hidden;}
+  .terms-box h4{margin:0; background:var(--ink); color:#fff; padding:10px 14px; font-size:13.5px;}
+  .terms-box ul{margin:0; padding:0; list-style:none;}
+  .terms-box li{padding:9px 14px; border-top:1px solid #e4dfd3; font-size:13px; line-height:1.7; color:var(--ink); background:#fff;}
+  .terms-box li:first-child{border-top:none;}
 
   .doc-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
   @media (max-width:560px){.doc-grid{grid-template-columns:1fr;}}
@@ -203,7 +209,7 @@ const DOCS = [
   {key:"id_photo",     label:"صورة الهوية الشخصية",   sub:"صورة واضحة لبطاقة الهوية"},
   {key:"racer_license",label:"رخصة المتسابق",          sub:"رخصة سباق سارية أو رخصة قيادة"},
   {key:"photo_5x5",    label:"صورة شخصية 5×5",         sub:"خلفية بيضاء، حديثة"},
-  {key:"car_license",  label:"رخصة السيارة (الاستمارة)", sub:"استمارة سارية باسم المشارك"},
+  {key:"car_license",  label:"رخصة السيارة",             sub:"استمارة سارية باسم المشارك"},
   {key:"car_insurance",label:"تأمين السيارة",           sub:"وثيقة تأمين سارية المفعول"}
 ];
 
@@ -284,6 +290,14 @@ function closedScreen(){
   </div>${footerBlock()}`;
 }
 
+function termsBox(title, items){
+  return `
+  <div class="terms-box">
+    <h4>${title}</h4>
+    <ul>${items.map(i=>`<li>${i}</li>`).join('')}</ul>
+  </div>`;
+}
+
 function docCard(doc){
   return `
   <div class="doc-card" id="doccard_${doc.key}">
@@ -324,6 +338,13 @@ function step1(){
         <div class="field" id="f_emergencyName"><label><span class="req">*</span>جهة اتصال للطوارئ - الاسم</label><input type="text" id="emergencyName"><div class="err">مطلوب</div></div>
         <div class="field" id="f_emergencyPhone"><label><span class="req">*</span>جهة اتصال للطوارئ - رقم الجوال</label><input type="tel" id="emergencyPhone"><div class="err">مطلوب</div></div>
       </div>
+      ${termsBox('شروط المتسابق', [
+        'خوذة الرأس مصنّفة',
+        'بدلة التسابق مصنّفة',
+        'قفازات مصنّفة',
+        'حذاء التسابق مصنّف',
+        'غطاء الوجه والرأس (القناع) مصنّف'
+      ])}
       <div class="nav-row" style="justify-content:flex-end;">
         <button type="button" class="btn-next" id="toStep2">التالي</button>
       </div>
@@ -334,20 +355,25 @@ function step1(){
 function step2(){
   return `
   <div class="card" data-step="2">
-    <div class="card-head"><div class="card-num">02</div><div><h3>بيانات المساعد</h3><span>يجب ألا يقل عمر المساعد عن 19 سنة</span></div></div>
+    <div class="card-head"><div class="card-num">02</div><div><h3>بيانات المساعد</h3><span>معلومات مرافق المتسابق وشروط أهليته</span></div></div>
     <div class="card-body">
       <div class="grid">
         <div class="field full" id="f_assistantFullName"><label><span class="req">*</span>الاسم الكامل للمساعد</label>
           <input type="text" id="assistantFullName" placeholder="كما هو مسجل في الهوية"><div class="err">اسم المساعد يجب أن يكون ثلاثيًا أو رباعيًا (3 أو 4 كلمات)</div></div>
         <div class="field" id="f_assistantNationalId"><label><span class="req">*</span>رقم هوية المساعد</label>
           <input type="text" id="assistantNationalId" inputmode="numeric"><div class="err">مطلوب</div></div>
-        <div class="field" id="f_assistantAge"><label><span class="req">*</span>عمر المساعد</label>
-          <input type="number" id="assistantAge" min="0"><div class="err">يجب أن يكون عمر المساعد 19 سنة أو أكثر</div></div>
+        <div class="field" id="f_assistantDob"><label><span class="req">*</span>تاريخ ميلاد المساعد</label>
+          <input type="date" id="assistantDob"><div class="err">يجب ألا يقل عمر المساعد عن 20 سنة</div></div>
         <div class="field" id="f_assistantPhone"><label><span class="req">*</span>رقم جوال المساعد</label>
           <input type="tel" id="assistantPhone" placeholder="05XXXXXXXX"><div class="err">مطلوب</div></div>
         <div class="field full" id="f_assistantCity"><label><span class="req">*</span>مدينة المساعد</label>
           <input type="text" id="assistantCity"><div class="err">الرجاء إدخال المدينة</div></div>
       </div>
+      ${termsBox('شروط المساعد', [
+        'ألا يقل عمر المساعد عن 20 سنة كاملة عند تاريخ التسجيل.',
+        'أن يكون لدى المساعد خبرة ودراية كافية برياضة الدريفت وإجراءات السلامة المتعلقة بها.',
+        'يتحمّل المتسابق المسؤولية القانونية والمادية الكاملة والمنفردة عن اختيار مساعد غير مؤهل، أو عن تقديم بيانات غير صحيحة أو إخفاء أي معلومات جوهرية عن الاتحاد بخصوص أهلية المساعد، ويُخلي الاتحاد الفلسطيني لرياضة السيارات والدراجات النارية من أي مسؤولية قد تنشأ عن ذلك.'
+      ])}
       <div class="nav-row">
         <button type="button" class="btn-back" id="toStep1">رجوع</button>
         <button type="button" class="btn-next" id="toStep3">التالي</button>
@@ -373,6 +399,13 @@ function step3(){
       <div class="check-row"><input type="checkbox" id="hasRollCage"><label for="hasRollCage">السيارة مجهزة بقفص حماية (Roll Cage) مطابق لمعايير الأمان</label></div>
       <div class="check-row"><input type="checkbox" id="hasFireExt"><label for="hasFireExt">تتوفر طفاية حريق ثابتة داخل السيارة</label></div>
       <div class="check-row"><input type="checkbox" id="hasHarness"><label for="hasHarness">حزام أمان خماسي النقاط (5-point harness) مثبّت</label></div>
+      ${termsBox('شروط السيارة', [
+        'مقعد مطابق للمواصفات ومثبت بطريقة صحيحة',
+        'حزام أمان مطابق للمواصفات ومثبت بطريقة صحيحة',
+        'قفص حماية (رول كيج) مطابق للمواصفات ومثبت بطريقة صحيحة',
+        'طفاية حريق فعّالة وتوجد بها صلاحية',
+        'نقاط السحب الأمامية والخلفية واضحة للاستخدام'
+      ])}
       <div class="nav-row">
         <button type="button" class="btn-back" id="toStep2b">رجوع</button>
         <button type="button" class="btn-next" id="toStep4">التالي</button>
@@ -395,6 +428,10 @@ function step4(){
         <input type="checkbox" id="terms">
         <label for="terms"><span class="req">*</span> أوافق على شروط وأحكام السباق وتعليمات السلامة الصادرة عن الاتحاد، وأتعهد بالالتزام الكامل بها طوال فعاليات الجولة.</label>
       </div>
+      ${termsBox('المستندات المطلوبة', [
+        'رخصة قيادة مضى على إصدارها عامين على الأقل',
+        'رخصة السيارة سارية المفعول'
+      ])}
       <div class="nav-row">
         <button type="button" class="btn-back" id="toStep3b">رجوع</button>
         <button type="button" class="btn-submit" id="submitBtn">إرسال طلب الاشتراك 🏁</button>
@@ -475,6 +512,17 @@ function fieldError(id, show){
 }
 function val(id){ return document.getElementById(id).value.trim(); }
 
+function calcAge(dobStr){
+  if(!dobStr) return NaN;
+  const dob = new Date(dobStr);
+  if(isNaN(dob.getTime())) return NaN;
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if(m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+  return age;
+}
+
 function validateStep1(){
   let ok = true;
   const req = ['nationalId','dob','phone','city','category','emergencyName','emergencyPhone'];
@@ -491,15 +539,15 @@ function validateStep1(){
 }
 function validateStep2(){
   let ok = true;
-  const req = ['assistantNationalId','assistantAge','assistantPhone','assistantCity'];
+  const req = ['assistantNationalId','assistantDob','assistantPhone','assistantCity'];
   req.forEach(k=>{ const bad = !val(k); fieldError(k, bad); if(bad) ok=false; });
   const assistantNameParts = val('assistantFullName').split(/\s+/).filter(Boolean);
   const assistantNameBad = assistantNameParts.length < 3 || assistantNameParts.length > 4;
   fieldError('assistantFullName', assistantNameBad);
   if(assistantNameBad) ok=false;
-  const assistantAge = val('assistantAge');
-  const assistantAgeBad = !assistantAge || Number(assistantAge) < 19;
-  fieldError('assistantAge', assistantAgeBad);
+  const assistantAge = calcAge(val('assistantDob'));
+  const assistantAgeBad = isNaN(assistantAge) || assistantAge < 20;
+  fieldError('assistantDob', assistantAgeBad);
   if(assistantAgeBad) ok=false;
   return ok;
 }
@@ -607,7 +655,8 @@ async function onSubmit(){
     bloodType: val('bloodType'), emergencyName: val('emergencyName'), emergencyPhone: val('emergencyPhone'),
     assistant:{
       fullName: val('assistantFullName'), nationalId: val('assistantNationalId'),
-      age: val('assistantAge'), phone: val('assistantPhone'), city: val('assistantCity')
+      dob: val('assistantDob'), age: calcAge(val('assistantDob')),
+      phone: val('assistantPhone'), city: val('assistantCity')
     },
     car:{
       carModel: val('carModel'), carYear: val('carYear'), carPlate: val('carPlate'), carColor: val('carColor'),
@@ -715,6 +764,7 @@ function renderAdminPanel(res, pass){
     <div class="admin-actions">
       <button id="toggleCloseBtn" class="${isClosed?'ghost':'danger'}">${isClosed?'إعادة فتح التسجيل':'إغلاق التسجيل الآن'}</button>
       <button id="extendBtn" class="ghost">تمديد التسجيل (إعادة تشغيل العد التنازلي)</button>
+      <button id="exportAllBtn" class="ghost">تصدير كشف كامل بجميع المتسابقين (CSV)</button>
     </div>
     <div style="overflow:auto;">
     <table class="admin-table">
@@ -739,6 +789,25 @@ function renderAdminPanel(res, pass){
     await api('extend', {pass});
     document.getElementById('adminOverlay').classList.remove('open');
     boot();
+  });
+
+  document.getElementById('exportAllBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('exportAllBtn');
+    btn.disabled = true; btn.textContent = 'جارٍ التصدير...';
+    const full = await api('exportAll', {pass});
+    btn.disabled = false; btn.textContent = 'تصدير كشف كامل بجميع المتسابقين (CSV)';
+    if(full.error || !full.rows){ alert('تعذّر التصدير: ' + (full.error||'')); return; }
+    const csvRows = full.rows.map(row => row.map(cell => {
+      const v = (cell===null||cell===undefined) ? '' : String(cell);
+      return '"' + v.replace(/"/g,'""') + '"';
+    }).join(','));
+    const csv = '﻿' + csvRows.join('\r\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'كشف_المتسابقين.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
   });
 
   content.querySelectorAll('.admin-del-btn').forEach(btn=>{
