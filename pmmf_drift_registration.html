@@ -714,6 +714,7 @@ function renderAdminPanel(res, pass){
     <p>عدد المسجلين: <b>${s.count}</b> / ${s.cap} — أيام متبقية: <b>${s.daysLeft}</b></p>
     <div class="admin-actions">
       <button id="toggleCloseBtn" class="${isClosed?'ghost':'danger'}">${isClosed?'إعادة فتح التسجيل':'إغلاق التسجيل الآن'}</button>
+      <button id="extendBtn" class="ghost">تمديد التسجيل (إعادة تشغيل العد التنازلي)</button>
     </div>
     <div style="overflow:auto;">
     <table class="admin-table">
@@ -729,6 +730,13 @@ function renderAdminPanel(res, pass){
 
   document.getElementById('toggleCloseBtn').addEventListener('click', async ()=>{
     await api('toggleClose', {pass});
+    document.getElementById('adminOverlay').classList.remove('open');
+    boot();
+  });
+
+  document.getElementById('extendBtn').addEventListener('click', async ()=>{
+    if(!confirm('سيتم إعادة تشغيل عدّاد الأيام من جديد بدءًا من الآن، وإلغاء أي إغلاق يدوي. متابعة؟')) return;
+    await api('extend', {pass});
     document.getElementById('adminOverlay').classList.remove('open');
     boot();
   });
