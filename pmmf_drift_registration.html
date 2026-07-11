@@ -678,6 +678,71 @@ function checkerDataUrl(w, h, sq){
   return c.toDataURL('image/png');
 }
 
+// تذييل صفحة موحّد (نفس الألوان والتخطيط والهوامش أينما استُخدم) - عنصر مستقل بأنماط inline
+// كاملة (لا يعتمد على أي كلاس/معرّف أب) كي يصلح للتضمين في أي قالب مهما اختلف عرضه أو حشوه.
+// يُستخدم في نموذج التسجيل الفردي (pdfDocumentHtml) وفي تصدير كشف المتسابقين (exportAdminPdf)
+// معًا، ثم يُصيَّر لاحقًا كصورة منفصلة وتُعاد لصقها على هامش كل صفحة عبر
+// renderPdfWithRepeatingFooter - بدل تركه في نهاية المحتوى المتدفّق فيظهر فقط أسفل آخر صفحة
+// عند تعدد الصفحات. الصنف "pdf-footer" مطلوب حرفيًا (محدِّد الاستعلام في renderPdfWithRepeatingFooter).
+function pdfFooterHtml(){
+  const C = PDF_COLORS;
+  return `<div class="pdf-footer" style="margin-top:16px;border-top:2px solid ${C.black};">
+    <div style="height:6px;background:linear-gradient(to left, ${C.black} 0 25%, #ffffff 25% 50%, ${C.green} 50% 75%, ${C.red} 75% 100%);"></div>
+    <div style="padding:16px 40px;display:flex;align-items:center;justify-content:space-between;font-size:11px;color:${C.ink};background:${C.paper};">
+      <div>
+        <div style="font-weight:700;">الاتحاد الفلسطيني لرياضة السيارات والدراجات النارية</div>
+        <div style="color:${C.muted};" dir="ltr">Ramallah — Palestine · info@pmmf.ps · www.pmmf.ps</div>
+      </div>
+      <div style="color:${C.muted};text-align:left;">
+        <div>PMMF · 2026</div>
+        <div dir="ltr">FIA Affiliated Member</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// يُصيّر عنصر el إلى PDF مع معاملة عنصر التذييل (محدَّدًا بـfooterSelector) كصورة منفصلة تتكرر
+// على هامش كل صفحة - بدل تركه مرة واحدة في نهاية المحتوى المتدفّق (فيظهر عندها فقط أسفل آخر
+// صفحة عند تعدد الصفحات، وأحيانًا في غير موضعه إن كانت الصفحة الأخيرة قصيرة المحتوى). يعيد
+// كائن jsPDF الناتج (استخدم .output()/.save() عليه مباشرة)، أو null إن كان التصيير الأولي صفحة
+// بيضاء فارغة. نسبة px→mm تُحسَب داخليًا من عرض el الفعلي المُقاس (getBoundingClientRect) مقابل
+// عرض محتوى الصفحة المتاح بعد الهوامش الجانبية - فتبقى صحيحة بصرف النظر عن أي حشو (padding)
+// داخلي في el نفسه أو في عنصر التذييل.
+async function renderPdfWithRepeatingFooter(el, footerSelector, opts){
+  const pageWidthMm = opts.jsPDF.orientation === 'landscape' ? 297 : 210; // A4 فقط (الحالة الوحيدة المستخدَمة هنا)
+  const baseMargin = opts.margin || 0;
+  const m = Array.isArray(baseMargin) ? baseMargin.slice() : [baseMargin, baseMargin, baseMargin, baseMargin]; // [top, right, bottom, left]
+  const pxToMm = (pageWidthMm - m[1] - m[3]) / el.getBoundingClientRect().width;
+
+  const footerEl = el.querySelector(footerSelector);
+  const elRect = el.getBoundingClientRect();
+  const footerRect = footerEl.getBoundingClientRect();
+  const footerOffsetXPx = footerRect.left - elRect.left;
+  const footerGapPx = parseFloat(getComputedStyle(footerEl).marginTop) || 0;
+  const footerHeightMm = (footerRect.height + footerGapPx) * pxToMm;
+
+  const footerCanvas = await html2pdf().set({ html2canvas: opts.html2canvas }).from(footerEl).toCanvas().get('canvas');
+  const footerImg = footerCanvas.toDataURL('image/jpeg', 0.92);
+  footerEl.remove();
+
+  m[2] = m[2] + footerHeightMm;
+  const finalOpts = Object.assign({}, opts, { margin: m });
+
+  const canvas = await html2pdf().set(finalOpts).from(el).toCanvas().get('canvas');
+  if(!canvasHasContent(canvas)) return null;
+
+  const pdf = await html2pdf().set(finalOpts).from(el).toPdf().get('pdf');
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const pageCount = pdf.internal.getNumberOfPages();
+  const footerXmm = m[3] + footerOffsetXPx * pxToMm;
+  const footerWidthMm = footerRect.width * pxToMm;
+  for(let i = 1; i <= pageCount; i++){
+    pdf.setPage(i);
+    pdf.addImage(footerImg, 'JPEG', footerXmm, pageHeight - m[2], footerWidthMm, footerHeightMm);
+  }
+  return pdf;
+}
+
 function pdfDocumentHtml(entry, regNumber){
   const C = PDF_COLORS;
   const a = entry.assistant || {};
@@ -743,11 +808,6 @@ function pdfDocumentHtml(entry, regNumber){
       #pdfPrintRoot .pdf-sig-black .pdf-sig-area{border-color:${C.black};border-top-color:${C.black};background:${C.tintBlack};}
       #pdfPrintRoot .pdf-sig-red .pdf-sig-area{border-color:${C.red};border-top-color:${C.red};background:${C.tintRed};}
       #pdfPrintRoot .pdf-sig-green .pdf-sig-area{border-color:${C.green};border-top-color:${C.green};background:${C.tintGreen};}
-      #pdfPrintRoot .pdf-footer{margin-top:16px;border-top:2px solid ${C.black};page-break-inside:avoid;}
-      #pdfPrintRoot .pdf-footer-flag{height:6px;background:linear-gradient(to left, ${C.black} 0 25%, #ffffff 25% 50%, ${C.green} 50% 75%, ${C.red} 75% 100%);}
-      #pdfPrintRoot .pdf-footer-content{padding:16px 40px;display:flex;align-items:center;justify-content:space-between;font-size:11px;color:${C.ink};background:${C.paper};}
-      #pdfPrintRoot .pdf-fed-name{font-weight:700;}
-      #pdfPrintRoot .pdf-muted{color:${C.muted};}
     </style>
 
     <div class="pdf-flagbar"></div>
@@ -826,19 +886,7 @@ function pdfDocumentHtml(entry, regNumber){
       </div>
     </div>
 
-    <div class="pdf-footer">
-      <div class="pdf-footer-flag"></div>
-      <div class="pdf-footer-content">
-        <div>
-          <div class="pdf-fed-name">الاتحاد الفلسطيني لرياضة السيارات والدراجات النارية</div>
-          <div class="pdf-muted" dir="ltr">Ramallah — Palestine · info@pmmf.ps · www.pmmf.ps</div>
-        </div>
-        <div class="pdf-muted" style="text-align:left;">
-          <div>PMMF · 2026</div>
-          <div dir="ltr">FIA Affiliated Member</div>
-        </div>
-      </div>
-    </div>
+    ${pdfFooterHtml()}
   </div>`;
 }
 
@@ -879,41 +927,16 @@ async function generateRegistrationPdf(entry, regNumber){
     await Promise.all(Array.from(host.querySelectorAll('img')).map(img =>
       (img.decode ? img.decode() : Promise.resolve()).catch(()=>{})
     ));
-    const html2canvasOpts = { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, scrollX: 0, scrollY: 0 };
     const el = host.firstElementChild;
-
-    // الفوتر كان يُترك مرة واحدة في نهاية المحتوى المتدفّق، فيظهر فقط أسفل آخر صفحة عند
-    // تعدد الصفحات. نصيّره هنا لوحده كصورة (وهو لا يزال داخل #pdfPrintRoot كي تنطبق عليه
-    // أنماطه) ثم نحذفه من التدفق ونعيد لصقه على هامش كل صفحة بعد بناء الـPDF.
-    const footerEl = el.querySelector('.pdf-footer');
-    const footerRect = footerEl.getBoundingClientRect();
-    const footerGapPx = parseFloat(getComputedStyle(footerEl).marginTop) || 0;
-    const PX_TO_MM = 210 / 794; // عرض القالب الثابت 794px يقابل عرض صفحة A4 كاملة (210مم)
-    const footerHeightMm = (footerRect.height + footerGapPx) * PX_TO_MM;
-    const footerCanvas = await html2pdf().set({ html2canvas: html2canvasOpts }).from(footerEl).toCanvas().get('canvas');
-    const footerImg = footerCanvas.toDataURL('image/jpeg', 0.92);
-    footerEl.remove();
-
     const opts = {
-      margin: [0, 0, footerHeightMm, 0],
+      margin: 0,
       image: { type: 'jpeg', quality: 0.92 },
-      html2canvas: html2canvasOpts,
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, scrollX: 0, scrollY: 0 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['css', 'legacy'] }
     };
-    // تصيير أولي للتحقق أن الناتج ليس صفحة بيضاء قبل اعتماد النسخة المتصفحية
-    const canvas = await html2pdf().set(opts).from(el).toCanvas().get('canvas');
-    if(!canvasHasContent(canvas)) return null;
-
-    const pdf = await html2pdf().set(opts).from(el).toPdf().get('pdf');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const pageCount = pdf.internal.getNumberOfPages();
-    for(let i = 1; i <= pageCount; i++){
-      pdf.setPage(i);
-      pdf.addImage(footerImg, 'JPEG', 0, pageHeight - footerHeightMm, pageWidth, footerHeightMm);
-    }
-    return pdf.output('datauristring');
+    const pdf = await renderPdfWithRepeatingFooter(el, '.pdf-footer', opts);
+    return pdf ? pdf.output('datauristring') : null;
   }catch(err){
     return null;
   }finally{
@@ -1141,7 +1164,7 @@ async function exportAdminPdf(entries, status){
         `<thead><tr>${groupRow}</tr><tr>${headRow}</tr></thead>` +
         `<tbody>${bodyRows}</tbody>` +
       `</table>` +
-      `<div style="margin-top:8px;font-size:8px;color:#51565b;">الاتحاد الفلسطيني لرياضة السيارات والدراجات النارية · PMMF · FIA Affiliated Member</div>` +
+      pdfFooterHtml() +
     `</div>`;
   const host = document.createElement('div');
   host.style.cssText = 'position:absolute;left:-9999px;top:0;width:1100px;background:#ffffff;';
@@ -1158,9 +1181,9 @@ async function exportAdminPdf(entries, status){
       pagebreak: { mode: ['css', 'legacy'] }
     };
     const el = host.firstElementChild;
-    const canvas = await html2pdf().set(opts).from(el).toCanvas().get('canvas');
-    if(!canvasHasContent(canvas)){ alert('تعذّر توليد ملف الـPDF، حاول مجددًا.'); return; }
-    await html2pdf().set(opts).from(el).save('كشف_المتسابقين.pdf');
+    const pdf = await renderPdfWithRepeatingFooter(el, '.pdf-footer', opts);
+    if(!pdf){ alert('تعذّر توليد ملف الـPDF، حاول مجددًا.'); return; }
+    pdf.save('كشف_المتسابقين.pdf');
   }catch(err){
     alert('تعذّر توليد ملف الـPDF: ' + err.message);
   }finally{
