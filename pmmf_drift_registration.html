@@ -879,18 +879,41 @@ async function generateRegistrationPdf(entry, regNumber){
     await Promise.all(Array.from(host.querySelectorAll('img')).map(img =>
       (img.decode ? img.decode() : Promise.resolve()).catch(()=>{})
     ));
+    const html2canvasOpts = { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, scrollX: 0, scrollY: 0 };
+    const el = host.firstElementChild;
+
+    // الفوتر كان يُترك مرة واحدة في نهاية المحتوى المتدفّق، فيظهر فقط أسفل آخر صفحة عند
+    // تعدد الصفحات. نصيّره هنا لوحده كصورة (وهو لا يزال داخل #pdfPrintRoot كي تنطبق عليه
+    // أنماطه) ثم نحذفه من التدفق ونعيد لصقه على هامش كل صفحة بعد بناء الـPDF.
+    const footerEl = el.querySelector('.pdf-footer');
+    const footerRect = footerEl.getBoundingClientRect();
+    const footerGapPx = parseFloat(getComputedStyle(footerEl).marginTop) || 0;
+    const PX_TO_MM = 210 / 794; // عرض القالب الثابت 794px يقابل عرض صفحة A4 كاملة (210مم)
+    const footerHeightMm = (footerRect.height + footerGapPx) * PX_TO_MM;
+    const footerCanvas = await html2pdf().set({ html2canvas: html2canvasOpts }).from(footerEl).toCanvas().get('canvas');
+    const footerImg = footerCanvas.toDataURL('image/jpeg', 0.92);
+    footerEl.remove();
+
     const opts = {
-      margin: 0,
+      margin: [0, 0, footerHeightMm, 0],
       image: { type: 'jpeg', quality: 0.92 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, scrollX: 0, scrollY: 0 },
+      html2canvas: html2canvasOpts,
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['css', 'legacy'] }
     };
-    const el = host.firstElementChild;
     // تصيير أولي للتحقق أن الناتج ليس صفحة بيضاء قبل اعتماد النسخة المتصفحية
     const canvas = await html2pdf().set(opts).from(el).toCanvas().get('canvas');
     if(!canvasHasContent(canvas)) return null;
-    return await html2pdf().set(opts).from(el).output('datauristring');
+
+    const pdf = await html2pdf().set(opts).from(el).toPdf().get('pdf');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const pageCount = pdf.internal.getNumberOfPages();
+    for(let i = 1; i <= pageCount; i++){
+      pdf.setPage(i);
+      pdf.addImage(footerImg, 'JPEG', 0, pageHeight - footerHeightMm, pageWidth, footerHeightMm);
+    }
+    return pdf.output('datauristring');
   }catch(err){
     return null;
   }finally{
