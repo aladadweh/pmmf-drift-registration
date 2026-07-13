@@ -1192,6 +1192,74 @@ async function exportAdminPdf(entries, status){
   }
 }
 
+// تصدير PDF عمودي (A4 Portrait) بكشف صور المتسابقين: الصورة الشخصية (مقصوصة 4×5) + الاسم +
+// رقم التسابق + المدينة + عمود "Licence Type" يُترك فارغًا دائمًا (يُعبَّأ يدويًا لاحقًا - لا
+// يوجد حقل مقابل له في نظام التسجيل حاليًا). الصور تُجلب من الباك إند بأمر 'photos' (يقرأها من
+// مجلد كل متسابق في Drive)؛ من سجّل قبل إضافة تسمية الملفات بمفتاح المستند، أو لم يرفع
+// "صورة شخصية 5×5"، تظهر خليته فارغة بدل صورة مكسورة.
+async function exportPhotoRosterPdf(entries, pass){
+  if(typeof html2pdf === 'undefined'){ alert('تعذّر تحميل مكتبة PDF، تأكد من اتصالك بالإنترنت وأعد تحميل الصفحة.'); return; }
+  const photosRes = await api('photos', {pass});
+  if(photosRes.error){ alert('تعذّر جلب صور المتسابقين: ' + photosRes.error); return; }
+  const photos = photosRes.photos || {};
+  const cell = v => esc(v === null || v === undefined ? '' : String(v));
+  const bodyRows = entries.map((en,i)=>{
+    const src = photos[en.raceNumber];
+    const photoCell = src ? `<img src="${src}" style="width:64px;height:80px;object-fit:cover;border:1px solid #d5d8db;">` : '';
+    return `<tr style="page-break-inside:avoid;background:${i%2 ? '#fbfaf7' : '#ffffff'};">` +
+      `<td style="border:1px solid #d5d8db;padding:4px;text-align:center;">${photoCell}</td>` +
+      `<td style="border:1px solid #d5d8db;padding:4px;font-size:11px;text-align:center;">${cell(en.fullName)}</td>` +
+      `<td style="border:1px solid #d5d8db;padding:4px;font-size:11px;text-align:center;">${cell(en.raceNumber)}</td>` +
+      `<td style="border:1px solid #d5d8db;padding:4px;font-size:11px;text-align:center;">${cell(en.city)}</td>` +
+      `<td style="border:1px solid #d5d8db;padding:4px;font-size:11px;text-align:center;"></td>` +
+    '</tr>';
+  }).join('');
+  const today = new Date().toLocaleDateString('en-GB');
+  const html =
+    `<div dir="rtl" style="width:760px;background:#fff;font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#171b1f;padding:14px;">` +
+      `<div style="height:6px;background:linear-gradient(to left,#0d0a0b 0 25%,#fff 25% 50%,#00602a 50% 75%,#c9000c 75% 100%);margin-bottom:10px;"></div>` +
+      `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">` +
+        `<div style="font-size:14px;font-weight:700;">كشف صور المتسابقين — سباق الدرفت — الجولة الأولى لعام 2026</div>` +
+        `<div style="font-size:9px;color:#51565b;" dir="ltr">${today} · ${entries.length} مشتركًا</div>` +
+      `</div>` +
+      `<table style="width:100%;border-collapse:collapse;" dir="rtl">` +
+        `<thead><tr>` +
+          `<th style="background:#0d0a0b;color:#fff;border:1px solid #c9000c;padding:5px 4px;font-size:10px;">الصورة</th>` +
+          `<th style="background:#0d0a0b;color:#fff;border:1px solid #c9000c;padding:5px 4px;font-size:10px;">الاسم</th>` +
+          `<th style="background:#0d0a0b;color:#fff;border:1px solid #c9000c;padding:5px 4px;font-size:10px;">رقم التسابق</th>` +
+          `<th style="background:#0d0a0b;color:#fff;border:1px solid #c9000c;padding:5px 4px;font-size:10px;">المدينة</th>` +
+          `<th style="background:#0d0a0b;color:#fff;border:1px solid #c9000c;padding:5px 4px;font-size:10px;" dir="ltr">Licence Type</th>` +
+        `</tr></thead>` +
+        `<tbody>${bodyRows}</tbody>` +
+      `</table>` +
+      pdfFooterHtml() +
+    `</div>`;
+  const host = document.createElement('div');
+  host.style.cssText = 'position:absolute;left:-9999px;top:0;width:760px;background:#ffffff;';
+  host.innerHTML = html;
+  document.body.appendChild(host);
+  const scroll = { x: window.scrollX || 0, y: window.scrollY || 0 };
+  window.scrollTo(0, 0);
+  try{
+    const opts = {
+      margin: 5,
+      image: { type: 'jpeg', quality: 0.92 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, scrollX: 0, scrollY: 0 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    };
+    const el = host.firstElementChild;
+    const pdf = await renderPdfWithRepeatingFooter(el, '.pdf-footer', opts);
+    if(!pdf){ alert('تعذّر توليد ملف الـPDF، حاول مجددًا.'); return; }
+    pdf.save('كشف_صور_المتسابقين.pdf');
+  }catch(err){
+    alert('تعذّر توليد ملف الـPDF: ' + err.message);
+  }finally{
+    host.remove();
+    window.scrollTo(scroll.x, scroll.y);
+  }
+}
+
 // توليد نماذج الاشتراك لكل المسجّلين بالتصميم المتصفحي المطابق (نفس قالب pdfDocumentHtml
 // حرفيًا، بلا أي تعديل) ورفعها للباك إند ليحفظها في مجلد "الاشتراكات" في Drive مستبدلةً
 // الملفات القديمة بنفس الأسماء (#01 - الاسم.pdf ...). يعمل تسلسليًا مع مؤشر تقدم على الزر.
@@ -1259,6 +1327,7 @@ function renderAdminPanel(res, pass){
       <button id="exportAllBtn" class="ghost">تصدير كشف كامل بجميع المتسابقين (CSV)</button>
       <button id="exportExcelBtn">تصدير الجدول Excel</button>
       <button id="exportPdfBtn">تصدير الجدول PDF</button>
+      <button id="exportPhotoRosterBtn" class="ghost">تصدير كشف الصور PDF</button>
       <button id="regenSubsBtn">توليد نماذج الاشتراكات بالتصميم ورفعها إلى Drive</button>
     </div>
     <div style="overflow:auto;">
@@ -1313,6 +1382,13 @@ function renderAdminPanel(res, pass){
     btn.disabled = true; btn.textContent = 'جارٍ توليد PDF...';
     try{ await exportAdminPdf(res.entries, s); }
     finally{ btn.disabled = false; btn.textContent = 'تصدير الجدول PDF'; }
+  });
+
+  document.getElementById('exportPhotoRosterBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('exportPhotoRosterBtn');
+    btn.disabled = true; btn.textContent = 'جارٍ توليد PDF...';
+    try{ await exportPhotoRosterPdf(res.entries, pass); }
+    finally{ btn.disabled = false; btn.textContent = 'تصدير كشف الصور PDF'; }
   });
 
   document.getElementById('exportAllBtn').addEventListener('click', async ()=>{
