@@ -4,17 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A single-page Arabic (RTL) registration form for a drift-racing event run by the Palestinian
-Motorsport and Motorcycle Federation (PMMF), plus its Google Apps Script backend. There is no
-build step, no package manager, and no framework — it's one big self-contained HTML file with
-inline `<style>` and `<script>`, backed by a Google Sheet.
+A single-page Arabic (RTL) registration form for a speed-racing event ("SPEED") run by the
+Palestinian Motorsport and Motorcycle Federation (PMMF), plus its Google Apps Script backend.
+There is no build step, no package manager, and no framework — it's one big self-contained HTML
+file with inline `<style>` and `<script>`, backed by a Google Sheet. The file and repo names still
+say "drift" — that's a historical artifact, not a description of the current event.
 
 Live site: https://aladadweh.github.io/pmmf-drift-registration/ (GitHub Pages, repo
 `aladadweh/pmmf-drift-registration`, branch `master`).
 
 ## Files
 
-- `pmmf_drift_registration.html` — the entire frontend (~500KB, mostly because the hero photo
+- `pmmf_speed_registration.html` — the entire frontend (~1MB, mostly because the hero photo
   and both logos are inlined as base64 `data:` URIs). Deployed as-is to GitHub Pages.
 - `pmmf_backend_apps_script.gs` — Google Apps Script backend. **Gitignored** — never committed,
   because it holds `DEFAULT_ADMIN_PASSCODE` in plaintext, which guards registrants' PII (names,
@@ -22,7 +23,7 @@ Live site: https://aladadweh.github.io/pmmf-drift-registration/ (GitHub Pages, r
   live Apps Script project.
 - `mock_server.js` — **Gitignored**. A local Node server that mirrors the `.gs` backend's action
   handlers in memory, for testing the form without touching the real Google Sheet.
-- `index.html` — meta-refresh redirect to `pmmf_drift_registration.html`, because GitHub Pages
+- `index.html` — meta-refresh redirect to `pmmf_speed_registration.html`, because GitHub Pages
   serves `index.html` at the root and the real file isn't named that.
 - `.nojekyll` — required so GitHub Pages serves the files as-is (Jekyll's build otherwise errors
   on the file, since it isn't valid Jekyll input).
@@ -41,13 +42,13 @@ There is no test suite, linter, or build command in this repo — verify changes
 mock server and driving the page in a browser (e.g. via a browser automation tool), since this is
 a form whose correctness is mostly about UI flow and validation, not unit-testable logic.
 
-After editing `pmmf_drift_registration.html`, **restart** `mock_server.js` only if you changed
+After editing `pmmf_speed_registration.html`, **restart** `mock_server.js` only if you changed
 `mock_server.js` itself — it re-reads the HTML file fresh on every request, so HTML edits are
 picked up without a restart.
 
 ## Architecture
 
-### Frontend (`pmmf_drift_registration.html`)
+### Frontend (`pmmf_speed_registration.html`)
 
 Single IIFE in a `<script>` tag. No dependencies except JSZip (loaded from a CDN `<script src>`
 tag, used only to let a submitter re-download their uploaded documents as a zip after success).
