@@ -4,18 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A single-page Arabic (RTL) registration form for a speed-racing event ("SPEED") run by the
-Palestinian Motorsport and Motorcycle Federation (PMMF), plus its Google Apps Script backend.
-There is no build step, no package manager, and no framework — it's one big self-contained HTML
-file with inline `<style>` and `<script>`, backed by a Google Sheet. The file and repo names still
-say "drift" — that's a historical artifact, not a description of the current event.
+A single-page Arabic (RTL) registration form for a drift-racing event run by the Palestinian
+Motorsport and Motorcycle Federation (PMMF), plus its Google Apps Script backend. There is no
+build step, no package manager, and no framework — it's one big self-contained HTML file with
+inline `<style>` and `<script>`, backed by a Google Sheet.
 
 Live site: https://aladadweh.github.io/pmmf-drift-registration/ (GitHub Pages, repo
 `aladadweh/pmmf-drift-registration`, branch `master`).
 
 ## Files
 
-- `pmmf_speed_registration.html` — the entire frontend (~1MB, mostly because the hero photo
+- `pmmf_drift_registration.html` — the entire frontend (~500KB, mostly because the hero photo
   and both logos are inlined as base64 `data:` URIs). Deployed as-is to GitHub Pages.
 - `pmmf_backend_apps_script.gs` — Google Apps Script backend. **Gitignored** — never committed,
   because it holds `DEFAULT_ADMIN_PASSCODE` in plaintext, which guards registrants' PII (names,
@@ -23,7 +22,7 @@ Live site: https://aladadweh.github.io/pmmf-drift-registration/ (GitHub Pages, r
   live Apps Script project.
 - `mock_server.js` — **Gitignored**. A local Node server that mirrors the `.gs` backend's action
   handlers in memory, for testing the form without touching the real Google Sheet.
-- `index.html` — meta-refresh redirect to `pmmf_speed_registration.html`, because GitHub Pages
+- `index.html` — meta-refresh redirect to `pmmf_drift_registration.html`, because GitHub Pages
   serves `index.html` at the root and the real file isn't named that.
 - `.nojekyll` — required so GitHub Pages serves the files as-is (Jekyll's build otherwise errors
   on the file, since it isn't valid Jekyll input).
@@ -42,13 +41,13 @@ There is no test suite, linter, or build command in this repo — verify changes
 mock server and driving the page in a browser (e.g. via a browser automation tool), since this is
 a form whose correctness is mostly about UI flow and validation, not unit-testable logic.
 
-After editing `pmmf_speed_registration.html`, **restart** `mock_server.js` only if you changed
+After editing `pmmf_drift_registration.html`, **restart** `mock_server.js` only if you changed
 `mock_server.js` itself — it re-reads the HTML file fresh on every request, so HTML edits are
 picked up without a restart.
 
 ## Architecture
 
-### Frontend (`pmmf_speed_registration.html`)
+### Frontend (`pmmf_drift_registration.html`)
 
 Single IIFE in a `<script>` tag. No dependencies except JSZip (loaded from a CDN `<script src>`
 tag, used only to let a submitter re-download their uploaded documents as a zip after success).
@@ -97,12 +96,7 @@ calls must stay in sync.
 - Registrant count/cap/closed state (`getStatus()`) is derived live from `sheet.getLastRow()`,
   not stored separately — so deleting a row automatically frees up a seat, no extra bookkeeping.
 - `CAP` and `WINDOW_DAYS` constants gate registration (max participants / days since the sheet's
-  `Meta` tab `OpenedAt` timestamp). `OpenedAt` also gates the *start* of registration: if it's in
-  the future, `getStatus()` reports `notYetOpen: true` (frontend shows "opens on `Meta` sequence
-  `OpenedAt`" instead of the generic closed reason). A brand-new `Meta` sheet seeds `OpenedAt` from
-  `SCHEDULED_OPEN_AT` instead of "now" — set that constant when scheduling a future registration
-  window before deploying. The admin panel's "تمديد التسجيل" button (`handleExtend`) resets
-  `OpenedAt` to the current moment and un-closes, for ad-hoc reopening/extension.
+  `Meta` tab `OpenedAt` timestamp).
 - Sheet columns are positional (`getRange(2, col, ...)` / array indices in `handleAdmin`) — if you
   add/reorder a field in `getSheet()`'s header row or `handleRegister()`'s `appendRow()` call, you
   must update both together, plus any hardcoded column indices in `handleAdmin()`.
