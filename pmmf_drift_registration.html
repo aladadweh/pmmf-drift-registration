@@ -877,8 +877,9 @@ function pdfDocumentHtml(entry, regNumber){
       #pdfPrintRoot .pdf-sec-title h4{font-weight:700;color:${C.black};font-size:16px;}
       #pdfPrintRoot .pdf-en{font-size:11px;text-transform:uppercase;color:${C.muted};font-weight:700;white-space:nowrap;}
       #pdfPrintRoot .pdf-line{flex:1;height:1px;background:${C.line};}
-      #pdfPrintRoot .pdf-driver-row{display:flex;gap:16px;align-items:flex-start;}
-      #pdfPrintRoot .pdf-photo-box{width:96px;height:120px;flex-shrink:0;border:2px solid ${C.red};border-radius:6px;overflow:hidden;background:${C.paper};}
+      #pdfPrintRoot .pdf-driver-row{display:flex;flex-direction:column;gap:16px;align-items:flex-end;}
+      #pdfPrintRoot .pdf-driver-row .pdf-grid{width:100%;}
+      #pdfPrintRoot .pdf-photo-box{width:120px;height:120px;flex-shrink:0;border:2px solid ${C.red};border-radius:6px;overflow:hidden;background:${C.paper};}
       #pdfPrintRoot .pdf-photo-box img{width:100%;height:100%;object-fit:cover;display:block;}
       #pdfPrintRoot .pdf-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;border:2px solid ${C.red};border-radius:6px;overflow:hidden;}
       #pdfPrintRoot .pdf-row{display:grid;grid-template-columns:150px 1fr;align-items:stretch;border-bottom:1px solid ${C.red};}
@@ -921,7 +922,7 @@ function pdfDocumentHtml(entry, regNumber){
     <div class="pdf-band">
       <div class="pdf-band-left">
         <span class="pdf-band-bar"></span>
-        <h3>نموذج اشتراك — سباق الدرفت — الجولة الأولى لعام 2026</h3>
+        <h3>نموذج اشتراك — سباق الدرفت — الجولة الثانية لعام 2026</h3>
       </div>
       <div class="pdf-reg" dir="ltr">REG #${String(regNumber).padStart(2,'0')}</div>
     </div>
@@ -936,7 +937,7 @@ function pdfDocumentHtml(entry, regNumber){
         </div>
         <div class="pdf-driver-row">
           <div class="pdf-photo-box">${photoSrc ? `<img src="${photoSrc}" alt="">` : ''}</div>
-          <div class="pdf-grid" style="flex:1;">
+          <div class="pdf-grid">
             ${row('الاسم الكامل', entry.fullName) + row('رقم الهوية', entry.nationalId) +
               row('تاريخ الميلاد', entry.dob) + row('رقم الجوال', entry.phone) +
               row('البريد الإلكتروني', entry.email) + row('المدينة', entry.city) +
@@ -1148,7 +1149,7 @@ async function buildAndDownloadZip(entry, raceNumber){
     const zip = new JSZip();
     const folder = zip.folder(entry.fullName + ' - ' + entry.nationalId);
     const info = `الاتحاد الفلسطيني لرياضة السيارات والدراجات النارية
-طلب اشتراك - سباق الدرفت - الجولة الأولى لعام 2026
+طلب اشتراك - سباق الدرفت - الجولة الثانية لعام 2026
 ------------------------------------------------
 رقم التسجيل: #${String(raceNumber).padStart(2,'0')}
 الاسم الكامل: ${entry.fullName}
@@ -1262,7 +1263,7 @@ async function exportAdminPdf(entries, status){
     `<div dir="rtl" style="width:1100px;background:#fff;font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#171b1f;padding:14px;">` +
       `<div style="height:6px;background:linear-gradient(to left,#0d0a0b 0 25%,#fff 25% 50%,#00602a 50% 75%,#c9000c 75% 100%);margin-bottom:10px;"></div>` +
       `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">` +
-        `<div style="font-size:14px;font-weight:700;">كشف المتسابقين — سباق الدرفت — الجولة الأولى لعام 2026</div>` +
+        `<div style="font-size:14px;font-weight:700;">كشف المتسابقين — سباق الدرفت — الجولة الثانية لعام 2026</div>` +
         `<div style="font-size:9px;color:#51565b;" dir="ltr">${today} · ${entries.length}/${status.cap} مشتركًا</div>` +
       `</div>` +
       `<table style="width:100%;border-collapse:collapse;" dir="rtl">` +
@@ -1324,7 +1325,7 @@ async function exportPhotoRosterPdf(entries, pass){
     `<div dir="rtl" style="width:760px;background:#fff;font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#171b1f;padding:14px;">` +
       `<div style="height:6px;background:linear-gradient(to left,#0d0a0b 0 25%,#fff 25% 50%,#00602a 50% 75%,#c9000c 75% 100%);margin-bottom:10px;"></div>` +
       `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">` +
-        `<div style="font-size:14px;font-weight:700;">كشف صور المتسابقين — سباق الدرفت — الجولة الأولى لعام 2026</div>` +
+        `<div style="font-size:14px;font-weight:700;">كشف صور المتسابقين — سباق الدرفت — الجولة الثانية لعام 2026</div>` +
         `<div style="font-size:9px;color:#51565b;" dir="ltr">${today} · ${entries.length} مشتركًا</div>` +
       `</div>` +
       `<table style="width:100%;border-collapse:collapse;" dir="rtl">` +
