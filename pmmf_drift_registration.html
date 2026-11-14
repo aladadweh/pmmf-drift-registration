@@ -795,7 +795,19 @@ function pdfFooterHtml(){
 // بيضاء فارغة. نسبة px→mm تُحسَب داخليًا من عرض el الفعلي المُقاس (getBoundingClientRect) مقابل
 // عرض محتوى الصفحة المتاح بعد الهوامش الجانبية - فتبقى صحيحة بصرف النظر عن أي حشو (padding)
 // داخلي في el نفسه أو في عنصر التذييل.
+function ensurePdfContainerLtr(){
+  if(document.getElementById('pdfLtrFix')) return;
+  const st = document.createElement('style');
+  st.id = 'pdfLtrFix';
+  st.textContent = '.html2pdf__overlay,.html2pdf__container{direction:ltr !important;text-align:left !important;}';
+  document.head.appendChild(st);
+}
 async function renderPdfWithRepeatingFooter(el, footerSelector, opts){
+  // على الجوال تكون الشاشة أضيق من النموذج (794px). html2pdf يضع النسخة داخل حاوية بعرض الشاشة،
+  // وفي صفحة RTL تُدفع النسخة العريضة خارج الحاوية إلى اليسار فتُقصّ الحافة اليسرى.
+  // الحل: حاويات html2pdf باتجاه LTR (النموذج نفسه يبقى dir="rtl"). (ومضيف النسخة المخفية
+  // ثابت الموضع - انظر المستدعين - لأن left:-9999px في صفحة RTL يوسّع الصفحة فيصغّرها الجوال.)
+  ensurePdfContainerLtr();
   const pageWidthMm = opts.jsPDF.orientation === 'landscape' ? 297 : 210; // A4 فقط (الحالة الوحيدة المستخدَمة هنا)
   const baseMargin = opts.margin || 0;
   const m = Array.isArray(baseMargin) ? baseMargin.slice() : [baseMargin, baseMargin, baseMargin, baseMargin]; // [top, right, bottom, left]
@@ -808,6 +820,8 @@ async function renderPdfWithRepeatingFooter(el, footerSelector, opts){
   const footerGapPx = parseFloat(getComputedStyle(footerEl).marginTop) || 0;
   const footerHeightMm = (footerRect.height + footerGapPx) * pxToMm;
 
+  // التذييل يُصيَّر منفصلًا خارج النموذج، فنثبّت اتجاهه (RTL) صراحة حتى لا يرث LTR من حاوية html2pdf
+  footerEl.setAttribute('dir', getComputedStyle(footerEl).direction);
   const footerCanvas = await html2pdf().set({ html2canvas: opts.html2canvas }).from(footerEl).toCanvas().get('canvas');
   const footerImg = footerCanvas.toDataURL('image/jpeg', 0.92);
   footerEl.remove();
@@ -1017,7 +1031,7 @@ function canvasHasContent(canvas){
 async function generateRegistrationPdf(entry, regNumber){
   if(typeof html2pdf === 'undefined') return null;
   const host = document.createElement('div');
-  host.style.cssText = 'position:absolute;left:-9999px;top:0;width:794px;background:#ffffff;';
+  host.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:0;overflow:hidden;visibility:hidden;pointer-events:none;z-index:-1;background:#ffffff;';
   host.innerHTML = pdfDocumentHtml(entry, regNumber);
   document.body.appendChild(host);
   // html2canvas يُزيح اللقطة بمقدار تمرير الصفحة الحالي، وهو ما أنتج PDF فارغًا عند الإرسال
@@ -1273,7 +1287,7 @@ async function exportAdminPdf(entries, status){
       pdfFooterHtml() +
     `</div>`;
   const host = document.createElement('div');
-  host.style.cssText = 'position:absolute;left:-9999px;top:0;width:1100px;background:#ffffff;';
+  host.style.cssText = 'position:fixed;left:0;top:0;width:1100px;height:0;overflow:hidden;visibility:hidden;pointer-events:none;z-index:-1;background:#ffffff;';
   host.innerHTML = html;
   document.body.appendChild(host);
   const scroll = { x: window.scrollX || 0, y: window.scrollY || 0 };
@@ -1341,7 +1355,7 @@ async function exportPhotoRosterPdf(entries, pass){
       pdfFooterHtml() +
     `</div>`;
   const host = document.createElement('div');
-  host.style.cssText = 'position:absolute;left:-9999px;top:0;width:760px;background:#ffffff;';
+  host.style.cssText = 'position:fixed;left:0;top:0;width:760px;height:0;overflow:hidden;visibility:hidden;pointer-events:none;z-index:-1;background:#ffffff;';
   host.innerHTML = html;
   document.body.appendChild(host);
   const scroll = { x: window.scrollX || 0, y: window.scrollY || 0 };
