@@ -624,7 +624,9 @@ function validateStep1(){
   fieldError('fullName', nameBad);
   if(nameBad) ok=false;
   const email = val('email');
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ fieldError('email', true); ok=false; }
+  const emailBad = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  fieldError('email', emailBad);
+  if(emailBad) ok=false;
   const phone = val('phone');
   if(phone && phone.replace(/\D/g,'').length < 8){ fieldError('phone', true); ok=false; }
   return ok;
@@ -1133,6 +1135,8 @@ async function onSubmit(){
   }
 
   await buildAndDownloadZip(entry, result.raceNumber);
+  // تحديث عدّاد المقاعد في شاشة النجاح ليشمل هذا التسجيل
+  if(state.status) state.status.count = Math.max(Number(state.status.count) || 0, Number(result.raceNumber) || 0);
   app.innerHTML = successScreen(entry, result.raceNumber);
   wireFooter();
   document.getElementById('downloadAgain')?.addEventListener('click', ()=> buildAndDownloadZip(entry, result.raceNumber));
